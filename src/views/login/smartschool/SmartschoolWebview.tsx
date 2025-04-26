@@ -34,7 +34,7 @@ import { useAlert } from "@/providers/AlertProvider";
 import useSoundHapticsWrapper from "@/utils/native/playSoundHaptics";
 import { BadgeInfo, Undo2 } from "lucide-react-native";
 
-const PronoteWebview: Screen<"PronoteWebview"> = ({ route, navigation }) => {
+const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation }) => {
   const theme = useTheme();
   const { showAlert } = useAlert();
 
@@ -196,7 +196,7 @@ const PronoteWebview: Screen<"PronoteWebview"> = ({ route, navigation }) => {
                 exiting={FadeOutDown.duration(100)}
                 layout={animPapillon(LinearTransition)}
               >
-                Connexion à Pronote
+                Connexion à Smartschool
               </Reanimated.Text>
 
               <Reanimated.View
@@ -236,24 +236,19 @@ const PronoteWebview: Screen<"PronoteWebview"> = ({ route, navigation }) => {
                 zIndex: 1,
               },
             ]}
-            source={{ uri: infoMobileURL }}
+            source={{ uri: instanceURL }}
             setSupportMultipleWindows={false}
             onLoadProgress={({ nativeEvent }) => {
               setLoadProgress(nativeEvent.progress);
             }}
             onError={(e) => {
-              console.error("Pronote webview error", e);
+              console.error("Smartschool webview error", e);
             }}
             onLoadStart={(e) => {
               const { url } = e.nativeEvent;
               setCurrentURL(url);
 
               setLoading(true);
-
-              if (url.includes("mobile.eleve.html")) {
-                setLoginStep("En attente de ton établissement");
-                setShowWebView(false);
-              }
             }}
             onMessage={async ({ nativeEvent }) => {
               const message = JSON.parse(nativeEvent.data);
@@ -403,4 +398,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PronoteWebview;
+export default SmartschoolWebview;

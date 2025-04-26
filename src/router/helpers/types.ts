@@ -88,7 +88,7 @@ export type RouteParameters = {
 
   // login.smartschool
   SmartschoolManualURL: undefined;
-
+  SmartschoolWebview: { instanceURL: string };
 
 
   // account.index

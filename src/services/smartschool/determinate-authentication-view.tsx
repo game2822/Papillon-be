@@ -1,6 +1,6 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteParameters } from "@/router/helpers/types";
-import { BadgeAlert, BadgeX, KeyRound, LockKeyhole, PlugZap } from "lucide-react-native";
+import { Fingerprint, BadgeAlert, BadgeX, KeyRound, PlugZap } from "lucide-react-native";
 import {info} from "@/utils/logger/logger";
 import type { Alert } from "@/providers/AlertProvider";
 
@@ -37,9 +37,31 @@ const determinateAuthenticationView = async <ScreenName extends keyof RouteParam
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
       }
     });
+    const loginoptionmodal =() => {
+      showAlert({
+        title: "Comment souhaite-tu te connecter ?",
+        message: "Tu peux te connecter avec tes infos ou avec Microsoft. Pas d’inquiétude, Papillon n’est pas lié à Microsoft ou à Smartschool, et ne consulte pas tes données, il ne les enregistre pas non plus. Tu seras juste redirigé sur ton choix.",
+        icon: <PlugZap />,
+        actions: [
+          {
+            title: "Identifiants",
+            onPress: () => goToLoginCredientals(),
+            icon: <KeyRound />,
+          },
+          {
+            title: "Microsoft",
+            onPress: () => goToLoginMicrosoft(),
+            primary: true,
+            icon: <Fingerprint />,
+          }
+        ],
+      });
+    };
+
     if (response.ok) {
       console.log("Response OK", response.status);
       info("SMARTSCHOOL->determinateAuthenticationView(): OK", "smartschool");
+      loginoptionmodal();
     } else {
       throw new Error("Network response was not ok");
     }
@@ -54,32 +76,14 @@ const determinateAuthenticationView = async <ScreenName extends keyof RouteParam
     return;
   }
 
-  const goToLoginENT = () => navigation.navigate("PronoteWebview", {
+  const goToLoginCredientals = () => navigation.navigate("SmartschoolWebview", {
     instanceURL: smartschoolURL
   });
 
-  info(JSON.stringify(instance, null, 2), (new Error()).stack!);
-  if (instance.casToken && instance.casURL) {
-    showAlert({
-      title: `L'instance ${instance.name} nécessite une connexion ENT.`,
-      message: "Tu seras redirigé vers le portail de connexion de ton ENT.",
-      icon: <PlugZap />,
-      actions: [
-        {
-          title: "Identifiants",
-          onPress: () => goToLoginNoENT(),
-          icon: <KeyRound />,
-        },
-        {
-          title: "Utiliser l'ENT",
-          onPress: () => goToLoginENT(),
-          primary: true,
-          icon: <LockKeyhole />,
-        }
-      ],
-    });
-  }
-  else goToLoginNoENT();
+  const goToLoginMicrosoft = () => navigation.navigate("SmartschoolWebview", {
+    instanceURL: smartschoolURL + "/login/sso/init/office365"
+  });
 };
+
 
 export default determinateAuthenticationView;

@@ -111,6 +111,7 @@ export interface CurrentAccountStore {
 
 export enum AccountService {
   Pronote,
+  Smartschool,
   // For the future...
   EcoleDirecte,
   Skolengo,
@@ -161,6 +162,22 @@ export interface PronoteAccount extends BaseAccount {
 
   authentication: pronote.RefreshInformation & {
     deviceUUID: string;
+  };
+  identityProvider?: undefined;
+  providers: string[];
+  serviceData: Record<string, unknown>;
+  associatedAccountsLocalIDs?: undefined
+}
+
+export interface SmartschoolAccount extends BaseAccount {
+  service: AccountService.Smartschool;
+  instance?: string;
+
+  authentication: {
+    session: string;
+    refreshToken: string;
+    accessToken: string;
+    expiresAt: number;
   };
   identityProvider?: undefined;
   providers: string[];
@@ -292,6 +309,7 @@ export interface IzlyAccount extends BaseExternalAccount {
 
 export type PrimaryAccount = (
   | PronoteAccount
+  | SmartschoolAccount
   | EcoleDirecteAccount
   | SkolengoAccount
   | MultiAccount
