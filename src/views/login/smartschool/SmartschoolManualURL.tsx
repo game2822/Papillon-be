@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import type { RouteParameters, Screen } from "@/router/helpers/types";
+import type { Screen } from "@/router/helpers/types";
 import { View, StyleSheet, TouchableOpacity, KeyboardEvent, Keyboard } from "react-native";
 import { usePapillonTheme as useTheme } from "@/utils/ui/theme";
-import determinateAuthenticationView from "@/services/pronote/determinate-authentication-view";
+import determinateAuthenticationView from "@/services/smartschool/determinate-authentication-view";
 
 import * as Clipboard from "expo-clipboard";
 
@@ -12,9 +12,8 @@ import MaskStars from "@/components/FirstInstallation/MaskStars";
 import PapillonShineBubble from "@/components/FirstInstallation/PapillonShineBubble";
 import ButtonCta from "@/components/FirstInstallation/ButtonCta";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { BadgeInfo, Link2, TriangleAlert, Undo2, X } from "lucide-react-native";
-import { Alert, useAlert } from "@/providers/AlertProvider";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Link2, X } from "lucide-react-native";
+import { useAlert } from "@/providers/AlertProvider";
 import ResponsiveTextInput from "@/components/FirstInstallation/ResponsiveTextInput";
 
 const SmartschoolManualURL: Screen<"SmartschoolManualURL"> = ({ route, navigation }) => {
@@ -70,32 +69,6 @@ const SmartschoolManualURL: Screen<"SmartschoolManualURL"> = ({ route, navigatio
     setClipboardFound(false);
   }, [instanceURL]);
 
-  const checkForDemoInstance = async <ScreenName extends keyof RouteParameters>(
-    instanceURL: string,
-    navigation: NativeStackNavigationProp<RouteParameters, ScreenName>,
-    showAlert: (alert: Alert) => void,
-  ): Promise<void> => {
-    if (!instanceURL.includes("demo.index-education.net")) return determinateAuthenticationView(instanceURL.trim(), navigation, showAlert);
-    showAlert({
-      title: "Instance non prise en charge",
-      message: "Désolé, les instances de démonstration ne sont pas prises en charge, elles peuvent être instables ou ne pas fonctionner correctement.",
-      icon: <BadgeInfo />,
-      actions: [
-        {
-          title: "Continuer",
-          icon: <TriangleAlert />,
-          onPress: () => determinateAuthenticationView(instanceURL, navigation, showAlert),
-          danger: false,
-          delayDisable: 5,
-        },
-        {
-          title: "Annuler",
-          icon: <Undo2 />,
-          primary: true,
-        }
-      ]
-    });
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -149,8 +122,7 @@ const SmartschoolManualURL: Screen<"SmartschoolManualURL"> = ({ route, navigatio
           onChangeText={setInstanceURL}
           onSubmitEditing={() => {
             if (instanceURL.length > 0) {
-              checkForDemoInstance(instanceURL, navigation, showAlert);
-            };
+              return determinateAuthenticationView(instanceURL.trim(), navigation, showAlert);            };
           }}
         />
 
@@ -179,8 +151,7 @@ const SmartschoolManualURL: Screen<"SmartschoolManualURL"> = ({ route, navigatio
           primary
           onPress={() => {
             if (instanceURL.length > 0) {
-              checkForDemoInstance(instanceURL, navigation, showAlert);
-            };
+              return determinateAuthenticationView(instanceURL.trim(), navigation, showAlert);            };
           }}
         />
         {(route.params?.method) && (

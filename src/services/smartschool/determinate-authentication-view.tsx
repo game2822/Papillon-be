@@ -1,8 +1,7 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteParameters } from "@/router/helpers/types";
-import { BadgeX, KeyRound, LockKeyhole, PlugZap } from "lucide-react-native";
-import pronote from "pawnote";
-import {info, warn} from "@/utils/logger/logger";
+import { BadgeAlert, BadgeX, KeyRound, LockKeyhole, PlugZap } from "lucide-react-native";
+import {info} from "@/utils/logger/logger";
 import type { Alert } from "@/providers/AlertProvider";
 
 /**
@@ -17,40 +16,43 @@ const determinateAuthenticationView = async <ScreenName extends keyof RouteParam
   navigation: NativeStackNavigationProp<RouteParameters, ScreenName>,
   showAlert: (alert: Alert) => void
 ): Promise<void> => {
-  let waitingInstance: pronote.Instance | undefined;
   if (!smartschoolURL.startsWith("https://") && !smartschoolURL.startsWith("http://")) {
     smartschoolURL = `https://${smartschoolURL}`;
   }
-  smartschoolURL = pronote.cleanURL(smartschoolURL);
+
+  if (!smartschoolURL.includes("smartschool.be")) {
+    showAlert({
+      title: "Erreur",
+      message: "L'URL fournie ne semble pas être une instance SMARTSCHOOL.",
+      icon: <BadgeAlert />,
+    });
+
+    return;
+  }
 
   try {
-    waitingInstance = await pronote.instance(smartschoolURL);
-    info("PRONOTE->determinateAuthenticationView(): OK", "pronote");
+    const response = await fetch(smartschoolURL, {
+      method: "GET",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+      }
+    });
+    if (response.ok) {
+      console.log("Response OK", response.status);
+      info("SMARTSCHOOL->determinateAuthenticationView(): OK", "smartschool");
+    } else {
+      throw new Error("Network response was not ok");
+    }
   }
   catch (error) {
-    try {
-      warn(`PRONOTE->determinateAuthenticationView(): Une erreur est survenue avec l'URL '${smartschoolURL}' ! Tentative avec une URL alternative (TOUTATICE)...`, "pronote");
-      smartschoolURL = smartschoolURL.replace(".index-education.net", ".pronote.toutatice.fr");
-      waitingInstance = await pronote.instance(smartschoolURL);
-      info("PRONOTE->determinateAuthenticationView(): OK", "pronote");
-    }
-    catch {
-      showAlert({
-        title: "Erreur",
-        message: "Impossible de récupérer les informations de l'instance PRONOTE.",
-        icon: <BadgeX />,
-      });
+    showAlert({
+      title: "Erreur",
+      message: "Impossible de récupérer les informations de l'instance SMARTSCHOOL.",
+      icon: <BadgeX />,
+    });
 
-      return;
-    }
+    return;
   }
-
-  const instance = waitingInstance as pronote.Instance;
-
-  const goToLoginNoENT = () => navigation.navigate("PronoteCredentials", {
-    instanceURL: smartschoolURL,
-    information: instance
-  });
 
   const goToLoginENT = () => navigation.navigate("PronoteWebview", {
     instanceURL: smartschoolURL
