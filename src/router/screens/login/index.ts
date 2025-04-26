@@ -6,6 +6,7 @@ import ServiceSelector from "@/views/login/ServiceSelector";
 import skolengo from "./skolengo";
 import identityProvider from "./identityProvider";
 import { Platform } from "react-native";
+import smartschool from "./smartschool";
 
 export default [
   createScreen("ServiceSelector", ServiceSelector, {
@@ -19,5 +20,6 @@ export default [
   ...pronote,
   ...ecoledirecte,
   ...skolengo,
+  ...smartschool,
   ...identityProvider,
 ] as const;

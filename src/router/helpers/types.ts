@@ -85,6 +85,12 @@ export type RouteParameters = {
   SkolengoInstanceSelector: { pos: CurrentPosition | null };
   SkolengoWebview: { school: SkolengoSchool };
 
+
+  // login.smartschool
+  SmartschoolManualURL: undefined;
+
+
+
   // account.index
   Home: undefined;
   HomeScreen?: { onboard: boolean };

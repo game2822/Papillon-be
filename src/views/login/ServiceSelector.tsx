@@ -77,6 +77,15 @@ const ServiceSelector: Screen<"ServiceSelector"> = ({ navigation }) => {
       }
     },
     {
+      name: "smartschool",
+      title: "SmartSchool",
+      image: require("../../../assets/images/service_smartschool.png"),
+      login: () => {
+        navigation.navigate("SmartschoolManualURL");
+        playSound(LEson);
+      }
+    },
+    {
       name: "university",
       title: "Enseignement supérieur",
       subtitle: "Universités, IUT, écoles, etc.",
