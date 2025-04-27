@@ -76,81 +76,6 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
     playSound(LEson3);
   }, []);
 
-  const INJECT_PRONOTE_JSON = `
-    (function () {
-      try {
-        const json = JSON.parse(document.body.innerText);
-        const lJetonCas = !!json && !!json.CAS && json.CAS.jetonCAS;
-        
-        document.cookie = "appliMobile=; expires=${PRONOTE_COOKIE_EXPIRED}"
-
-        if (!!lJetonCas) {
-          document.cookie = "validationAppliMobile=" + lJetonCas + "; expires=${PRONOTE_COOKIE_VALIDATION_EXPIRES}";
-          document.cookie = "uuidAppliMobile=${deviceUUID}; expires=${PRONOTE_COOKIE_VALIDATION_EXPIRES}";
-          // 1036 = French
-          document.cookie = "ielang=1036; expires=${PRONOTE_COOKIE_LANGUAGE_EXPIRES}";
-        }
-
-        window.location.assign("${instanceURL}/mobile.eleve.html?fd=1");
-      }
-      catch {
-        // TODO: Handle error
-      }
-    })();
-  `.trim();
-
-  /**
-   * Creates the hook inside the webview when logging in.
-   * Also hides the "Download PRONOTE app" button.
-   */
-  const INJECT_PRONOTE_INITIAL_LOGIN_HOOK = `
-    (function () {
-      window.hookAccesDepuisAppli = function() {
-        this.passerEnModeValidationAppliMobile('', '${deviceUUID}');
-      };
-      
-      return '';
-    })();
-  `.trim();
-
-  const INJECT_PRONOTE_CURRENT_LOGIN_STATE = `
-    (function () {
-      setInterval(function() {
-        const state = window && window.loginState ? window.loginState : void 0;
-
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'pronote.loginState',
-          data: state
-        }));
-      }, 1000);
-    })();
-  `.trim();
-
-  const INJECT_SMARTSCHOOL_COOKIE_GETTER = `
-  (function () {
-    setInterval(function() {
-      if (document.cookie.includes("smscndc")) {
-        let allcookiesdata = document.cookie.split("; ");
-        let smscndc = "";
-        for (let i = 0; i < allcookiesdata.length; i++) {
-          let cookie = allcookiesdata[i].split("=");
-          if (cookie[0] == "smscndc") {
-            smscndc = cookie[1];
-            break;
-          }
-        }
-        
-        // Post the cookie value back to React Native
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'smartschool.cookie',
-          data: {
-            smscndc: smscndc
-          }
-        }));
-      }
-    }, 1000);
-  })();
-`.trim();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -360,16 +285,11 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
             onLoadEnd={(e) => {
               const { url } = e.nativeEvent;
 
-              webViewRef.current?.injectJavaScript(
-                INJECT_SMARTSCHOOL_COOKIE_GETTER
-              );
-
               if (
                 url.includes(
                   "InfoMobileApp.json?id=0D264427-EEFC-4810-A9E9-346942A862A4"
                 )
               ) {
-                webViewRef.current?.injectJavaScript(INJECT_PRONOTE_JSON);
               } else {
                 setLoading(false);
                 if (url.includes("pronote/mobile.eleve.html")) {
@@ -388,15 +308,6 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
                       ],
                     });
                   } else {
-                    webViewRef.current?.injectJavaScript(
-                      INJECT_PRONOTE_INITIAL_LOGIN_HOOK
-                    );
-                    webViewRef.current?.injectJavaScript(
-                      INJECT_PRONOTE_CURRENT_LOGIN_STATE
-                    );
-                    webViewRef.current?.injectJavaScript(
-                      INJECT_SMARTSCHOOL_COOKIE_GETTER
-                    );
                   }
                 }
 
