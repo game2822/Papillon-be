@@ -171,13 +171,10 @@ export interface PronoteAccount extends BaseAccount {
 
 export interface SmartschoolAccount extends BaseAccount {
   service: AccountService.Smartschool;
-  instance?: string;
+  instance?: pronote.SessionHandle;
 
-  authentication: {
-    session: string;
-    refreshToken: string;
-    accessToken: string;
-    expiresAt: number;
+  authentication: pronote.RefreshInformation & {
+    deviceUUID: string;
   };
   identityProvider?: undefined;
   providers: string[];

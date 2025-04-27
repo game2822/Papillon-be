@@ -55,8 +55,6 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
 
   const instanceURL = route.params.instanceURL.toLowerCase();
 
-  const infoMobileURL =
-    instanceURL + "/InfoMobileApp.json?id=0D264427-EEFC-4810-A9E9-346942A862A4";
 
   let webViewRef = createRef<WebView>();
   let currentLoginStateIntervalRef = useRef<ReturnType<
@@ -127,6 +125,32 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
       }, 1000);
     })();
   `.trim();
+
+  const INJECT_SMARTSCHOOL_COOKIE_GETTER = `
+  (function () {
+    setInterval(function() {
+      if (document.cookie.includes("smscndc")) {
+        let allcookiesdata = document.cookie.split("; ");
+        let smscndc = "";
+        for (let i = 0; i < allcookiesdata.length; i++) {
+          let cookie = allcookiesdata[i].split("=");
+          if (cookie[0] == "smscndc") {
+            smscndc = cookie[1];
+            break;
+          }
+        }
+        
+        // Post the cookie value back to React Native
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'smartschool.cookie',
+          data: {
+            smscndc: smscndc
+          }
+        }));
+      }
+    }, 1000);
+  })();
+`.trim();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -253,7 +277,8 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
             onMessage={async ({ nativeEvent }) => {
               const message = JSON.parse(nativeEvent.data);
 
-              if (message.type === "pronote.loginState") {
+              if (message.type === "smartschool.cookie") {
+                console.log("Smartschool cookie", message.data);
                 if (loggingIn) return;
                 if (!message.data) return;
                 if (message.data.status !== 0) return;
@@ -336,7 +361,7 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
               const { url } = e.nativeEvent;
 
               webViewRef.current?.injectJavaScript(
-                INJECT_PRONOTE_INITIAL_LOGIN_HOOK
+                INJECT_SMARTSCHOOL_COOKIE_GETTER
               );
 
               if (
@@ -369,6 +394,9 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
                     webViewRef.current?.injectJavaScript(
                       INJECT_PRONOTE_CURRENT_LOGIN_STATE
                     );
+                    webViewRef.current?.injectJavaScript(
+                      INJECT_SMARTSCHOOL_COOKIE_GETTER
+                    );
                   }
                 }
 
@@ -379,6 +407,7 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
             }}
             incognito={true} // prevent to keep cookies on webview load
             userAgent="Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
+            webviewDebuggingEnabled={true}
           />
         </View>
       </KeyboardAvoidingView>
