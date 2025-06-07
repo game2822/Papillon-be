@@ -29,7 +29,10 @@ export default [
     headerTitle: "IUT de Lannion",
   }),
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/main
   createScreen("UnivSorbonneParisNord_login", UnivSorbonneParisNord_login, {
     headerBackVisible: true,
     headerTitle: "Université Sorbonne Paris Nord",
