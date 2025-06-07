@@ -1,9 +1,16 @@
 import { ExpoConfig } from "expo/config";
 import PackageJSON from "./package.json";
 
+
 export default (): ExpoConfig => ({
   name: "Papillon",
+  extra: {
+    eas: {
+      projectId: "c1ae7ca9-06af-4302-8b1f-be8de4fd1a1e"
+    }
+  },
   slug: PackageJSON.name,
+  owner: "game28",
   scheme: "papillon",
   version: PackageJSON.version,
   orientation: "default",

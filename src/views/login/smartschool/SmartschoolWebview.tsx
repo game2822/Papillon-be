@@ -7,12 +7,14 @@ import {
   Platform,
 } from "react-native";
 
+import { useAccounts, useCurrentAccount } from "@/stores/account";
 import { WebView } from "react-native-webview";
 import type { Screen } from "@/router/helpers/types";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePapillonTheme as useTheme } from "@/utils/ui/theme";
 import MaskStars from "@/components/FirstInstallation/MaskStars";
-
+import CookieManager from "@react-native-cookies/cookies";
+import { Account, AccountService } from "@/stores/account/types";
 import Reanimated, {
   FadeIn,
   FadeInUp,
@@ -21,18 +23,11 @@ import Reanimated, {
   LinearTransition,
 } from "react-native-reanimated";
 
-import pronote from "pawnote";
-
-import { useAccounts, useCurrentAccount } from "@/stores/account";
-import { Account, AccountService } from "@/stores/account/types";
-import uuid from "@/utils/uuid-v4";
-import defaultPersonalization from "@/services/pronote/default-personalization";
-import extract_pronote_name from "@/utils/format/extract_pronote_name";
 import PapillonSpinner from "@/components/Global/PapillonSpinner";
 import { animPapillon } from "@/utils/ui/animations";
 import { useAlert } from "@/providers/AlertProvider";
+import uuid from "@/utils/uuid-v4";
 import useSoundHapticsWrapper from "@/utils/native/playSoundHaptics";
-import { BadgeInfo, Undo2 } from "lucide-react-native";
 
 const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation }) => {
   const theme = useTheme();
@@ -42,9 +37,8 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
   const [, setLoadProgress] = useState(0);
   const [showWebView, setShowWebView] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
-
+  const [PHPSESSID, setPHPSESSID] = useState("");
   const [, setCurrentURL] = useState("");
-
   const [deviceUUID] = useState(uuid());
 
   const [loginStep, setLoginStep] = useState("Préparation de la connexion");
@@ -61,22 +55,66 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
     typeof setInterval
   > | null>(null);
 
+
   const createStoredAccount = useAccounts((store) => store.create);
   const switchTo = useCurrentAccount((store) => store.switchTo);
-
-  const PRONOTE_COOKIE_EXPIRED = new Date(0).toUTCString();
-  const PRONOTE_COOKIE_VALIDATION_EXPIRES = new Date(
-    new Date().getTime() + 5 * 60 * 1000
-  ).toUTCString();
-  const PRONOTE_COOKIE_LANGUAGE_EXPIRES = new Date(
-    new Date().getTime() + 365 * 24 * 60 * 60 * 1000
-  ).toUTCString();
 
   useEffect(() => {
     playSound(LEson3);
   }, []);
 
+  const handleNavigationStateChange = async (navState) => {
+    if (navState.url.endsWith(".smartschool.be/")) {
+      const cookies = await CookieManager.get(navState.url);
 
+      if (cookies?.PHPSESSID?.value) {
+        console.log("PHPSESSID:", cookies.PHPSESSID.value);
+        setPHPSESSID(cookies.PHPSESSID.value);
+        setShowWebView(false);
+        setLoginStep("Obtention des informations");
+        setLoggingIn(true);
+
+        if (currentLoginStateIntervalRef.current)
+          clearInterval(currentLoginStateIntervalRef.current);
+
+        setLoading(false);
+
+        const name = "Annis Azzouz";
+
+        const account: Account = {
+          service: AccountService.Smartschool,
+          isExternal: false,
+          linkedExternalLocalIDs: [],
+          localID: deviceUUID,
+
+          studentName: {
+            first: "Annis",
+            last: "Azzouz",
+          },
+          name,
+
+          identity: {},
+          serviceData: {},
+          providers: []
+        };
+
+        createStoredAccount(account);
+        setLoading(false);
+        switchTo(account);
+
+        // We need to wait a tick to make sure the account is set before navigating.
+        queueMicrotask(() => {
+          // Reset the navigation stack to the "Home" screen.
+          // Prevents the user from going back to the login screen.
+          playSound(LEson4);
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "AccountCreated" }],
+          });
+        });
+      }
+    }
+  };
   return (
     <SafeAreaView style={styles.container}>
       <MaskStars />
@@ -173,6 +211,7 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
 
           <WebView
             ref={webViewRef}
+            onNavigationStateChange={handleNavigationStateChange}
             style={[
               styles.webview,
               {
@@ -199,126 +238,12 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
 
               setLoading(true);
             }}
-            onMessage={async ({ nativeEvent }) => {
-              const message = JSON.parse(nativeEvent.data);
-
-              if (message.type === "smartschool.cookie") {
-                console.log("Smartschool cookie", message.data);
-                if (loggingIn) return;
-                if (!message.data) return;
-                if (message.data.status !== 0) return;
-                setShowWebView(false);
-                setLoginStep("Obtention des informations");
-                setLoggingIn(true);
-
-                if (currentLoginStateIntervalRef.current)
-                  clearInterval(currentLoginStateIntervalRef.current);
-
-                const session = pronote.createSessionHandle();
-                const refresh = await pronote
-                  .loginToken(session, {
-                    url: instanceURL,
-                    kind: pronote.AccountKind.STUDENT,
-                    username: message.data.login,
-                    token: message.data.mdp,
-                    deviceUUID
-                  }
-                  ).catch((error) => {
-                    if (error instanceof pronote.SecurityError && !error.handle.shouldCustomPassword && !error.handle.shouldCustomDoubleAuth) {
-                      navigation.navigate("Pronote2FA_Auth", {
-                        session,
-                        error,
-                        accountID: deviceUUID
-                      });
-                    } else {
-                      throw error;
-                    }
-                  });
-
-                if (!refresh) throw pronote.AuthenticateError;
-
-                const user = session.user.resources[0];
-                const name = user.name;
-
-                const account: Account = {
-                  instance: session,
-
-                  localID: deviceUUID,
-                  service: AccountService.Pronote,
-
-                  isExternal: false,
-                  linkedExternalLocalIDs: [],
-
-                  name,
-                  className: user.className,
-                  schoolName: user.establishmentName,
-                  studentName: {
-                    first: extract_pronote_name(name).givenName,
-                    last: extract_pronote_name(name).familyName,
-                  },
-
-                  authentication: { ...refresh, deviceUUID },
-                  personalization: await defaultPersonalization(session),
-
-                  identity: {},
-                  serviceData: {},
-                  providers: []
-                };
-
-                pronote.startPresenceInterval(session);
-                createStoredAccount(account);
-                setLoading(false);
-                switchTo(account);
-
-                // We need to wait a tick to make sure the account is set before navigating.
-                queueMicrotask(() => {
-                  // Reset the navigation stack to the "Home" screen.
-                  // Prevents the user from going back to the login screen.
-                  playSound(LEson4);
-                  navigation.reset({
-                    index: 0,
-                    routes: [{ name: "AccountCreated" }],
-                  });
-                });
-              }
-            }}
             onLoadEnd={(e) => {
-              const { url } = e.nativeEvent;
-
-              if (
-                url.includes(
-                  "InfoMobileApp.json?id=0D264427-EEFC-4810-A9E9-346942A862A4"
-                )
-              ) {
-              } else {
-                setLoading(false);
-                if (url.includes("pronote/mobile.eleve.html")) {
-                  if (!url.includes("identifiant")) {
-                    showAlert({
-                      title: "Attention",
-                      message: "Désolé, seuls les comptes élèves sont compatibles pour le moment.",
-                      icon: <BadgeInfo />,
-                      actions: [
-                        {
-                          title: "OK",
-                          primary: true,
-                          icon: <Undo2 />,
-                          onPress: () => navigation.goBack(),
-                        },
-                      ],
-                    });
-                  } else {
-                  }
-                }
-
-                if (url.split("?")[0].includes("mobile.eleve.html") == false) {
-                  setShowWebView(true);
-                }
-              }
-            }}
+              setShowWebView(true);
+            }
+            }
             incognito={true} // prevent to keep cookies on webview load
             userAgent="Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
-            webviewDebuggingEnabled={true}
           />
         </View>
       </KeyboardAvoidingView>
