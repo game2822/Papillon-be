@@ -42,6 +42,12 @@ export async function updateHomeworkForWeekInCache <T extends Account> (account:
         useClassSubjectStore.getState().pushSubjects(response.subjects);
         break;
       }
+      case AccountService.Smartschool: {
+        const { getHomeworkForWeek } = await import("./smartschool/data/homework");
+        const weekNumber = dateToEpochWeekNumber(date);
+        homeworks = await getHomeworkForWeek(account, weekNumber);
+        break;
+      }
       case AccountService.Local: {
         homeworks = [];
         break;

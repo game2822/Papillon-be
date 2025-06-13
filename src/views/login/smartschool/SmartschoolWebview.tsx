@@ -28,6 +28,7 @@ import { animPapillon } from "@/utils/ui/animations";
 import { useAlert } from "@/providers/AlertProvider";
 import uuid from "@/utils/uuid-v4";
 import useSoundHapticsWrapper from "@/utils/native/playSoundHaptics";
+import defaultPersonalization from "@/services/smartschool/default-personalization";
 
 const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation }) => {
   const theme = useTheme();
@@ -40,6 +41,11 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
   const [PHPSESSID, setPHPSESSID] = useState("");
   const [, setCurrentURL] = useState("");
   const [deviceUUID] = useState(uuid());
+  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [img, setImg] = useState("");
+  const [userID, setUserID] = useState("");
 
   const [loginStep, setLoginStep] = useState("Préparation de la connexion");
 
@@ -49,12 +55,37 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
 
   const instanceURL = route.params.instanceURL.toLowerCase();
 
-
   let webViewRef = createRef<WebView>();
   let currentLoginStateIntervalRef = useRef<ReturnType<
     typeof setInterval
   > | null>(null);
 
+  const INJECT_USER_DATA_FETCHER = `
+    (function () {
+  const interval = setInterval(() => {
+    try {
+      const user = SMSC?.vars?.currentUser;
+      if (user && user.name) {
+        console.log("Name found:", user.name);
+
+         window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: "USER_INFO",
+          name: user.name,
+          firstName: user.name.split(" ")[0] || "",
+          lastName: user.name.split(" ")[1] || "",
+          img: user.userPictureurl || "",
+          userID: user.userIdentifier || ""
+        }));
+        clearInterval(interval); // Done waiting!
+      } else {
+        console.log("Waiting for SMSC.vars.currentUser");
+      }
+    } catch (err) {
+      console.error("Error while accessing SMSC:", err);
+      clearInterval(interval); // Avoid infinite loop on error
+    }
+  }, 500); // Check every 500ms
+})();`.trim();
 
   const createStoredAccount = useAccounts((store) => store.create);
   const switchTo = useCurrentAccount((store) => store.switchTo);
@@ -79,8 +110,6 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
 
         setLoading(false);
 
-        const name = "Annis Azzouz";
-
         const account: Account = {
           service: AccountService.Smartschool,
           isExternal: false,
@@ -88,14 +117,22 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
           localID: deviceUUID,
 
           studentName: {
-            first: "Annis",
-            last: "Azzouz",
+            first: firstName,
+            last: lastName,
           },
           name,
+          authentication: {
+            session: cookies.PHPSESSID.value,
+            account: cookies.PHPSESSID.value,
+            userID: userID,
+          },
 
           identity: {},
           serviceData: {},
-          providers: []
+          providers: [],
+          personalization: await defaultPersonalization(
+            img
+          ),
         };
 
         createStoredAccount(account);
@@ -229,17 +266,30 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
             onLoadProgress={({ nativeEvent }) => {
               setLoadProgress(nativeEvent.progress);
             }}
+            onMessage={async ({ nativeEvent }) => {
+              const data = JSON.parse(nativeEvent.data);
+              if (data.type === "USER_INFO") {
+                console.log("User info received:", data);
+                setName(data.name);
+                setFirstName(data.firstName);
+                setLastName(data.lastName);
+                setImg(data.img);
+                setUserID(data.userID);
+              } else {
+                console.warn("Unknown message type:", data.type);
+              }
+            }}
             onError={(e) => {
               console.error("Smartschool webview error", e);
             }}
             onLoadStart={(e) => {
               const { url } = e.nativeEvent;
               setCurrentURL(url);
-
               setLoading(true);
             }}
             onLoadEnd={(e) => {
               setShowWebView(true);
+              webViewRef.current?.injectJavaScript(INJECT_USER_DATA_FETCHER);
             }
             }
             incognito={true} // prevent to keep cookies on webview load

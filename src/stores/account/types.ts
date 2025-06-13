@@ -145,6 +145,7 @@ interface BaseAccount {
     first: string;
     last: string;
   };
+  personalization: Partial<Personalization>;
 }
 
 interface BaseExternalAccount {
@@ -170,10 +171,13 @@ export interface PronoteAccount extends BaseAccount {
 
 export interface SmartschoolAccount extends BaseAccount {
   service: AccountService.Smartschool;
-  instance?: pronote.SessionHandle;
-
 
   identityProvider?: undefined;
+  authentication: {
+    session: string;
+    account: string;
+    userID: string;
+  };
   providers: string[];
   serviceData: Record<string, unknown>;
   associatedAccountsLocalIDs?: undefined
