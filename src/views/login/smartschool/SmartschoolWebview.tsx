@@ -13,7 +13,7 @@ import type { Screen } from "@/router/helpers/types";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePapillonTheme as useTheme } from "@/utils/ui/theme";
 import MaskStars from "@/components/FirstInstallation/MaskStars";
-import CookieManager from "@react-native-cookies/cookies";
+//import CookieManager from "@react-native-cookies/cookies";
 import { Account, AccountService } from "@/stores/account/types";
 import Reanimated, {
   FadeIn,
@@ -29,6 +29,7 @@ import { useAlert } from "@/providers/AlertProvider";
 import uuid from "@/utils/uuid-v4";
 import useSoundHapticsWrapper from "@/utils/native/playSoundHaptics";
 import defaultPersonalization from "@/services/smartschool/default-personalization";
+import CookieManager from "@react-native-cookies/cookies";
 
 const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation }) => {
   const theme = useTheme();
@@ -41,7 +42,7 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
   const [PHPSESSID, setPHPSESSID] = useState("");
   const [, setCurrentURL] = useState("");
   const [deviceUUID] = useState(uuid());
-  const [name, setName] = useState("");
+  const [name, setName] = useState("Jhon Doe");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [img, setImg] = useState("");
@@ -54,6 +55,9 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
   const LEson4 = require("@/../assets/sound/4.wav");
 
   const instanceURL = route.params.instanceURL.toLowerCase();
+
+  const ServerURL =
+    instanceURL.match(/https?:\/\/([^/]+)\.smartschool\.be/)?.[0] || "";
 
   let webViewRef = createRef<WebView>();
   let currentLoginStateIntervalRef = useRef<ReturnType<
@@ -73,7 +77,7 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
           name: user.name,
           firstName: user.name.split(" ")[0] || "",
           lastName: user.name.split(" ")[1] || "",
-          img: user.userPictureurl || "",
+          img: user.userPictureUrl || "",
           userID: user.userIdentifier || ""
         }));
         clearInterval(interval); // Done waiting!
@@ -111,6 +115,7 @@ const SmartschoolWebview: Screen<"SmartschoolWebview"> = ({ route, navigation })
         setLoading(false);
 
         const account: Account = {
+          instanceurl: ServerURL,
           service: AccountService.Smartschool,
           isExternal: false,
           linkedExternalLocalIDs: [],

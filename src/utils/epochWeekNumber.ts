@@ -95,6 +95,37 @@ export const weekNumberToDateRange = (
   };
 };
 
+export const weekNumberToIsoDate = (
+  epochWeekNumber: number,
+  numberOfWeeksBefore = 0,
+  numberOfWeeksAfter = 0
+) => {
+  const baseTime =
+    epochWeekNumber * EPOCH_WN_CONFIG.numberOfMsInAWeek -
+    EPOCH_WN_CONFIG.adjustEpochInitialDate;
+
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const start = new Date(
+    baseTime - numberOfWeeksBefore * EPOCH_WN_CONFIG.numberOfMsInAWeek
+  );
+  const end = new Date(
+    baseTime +
+      518400000 +
+      numberOfWeeksAfter * EPOCH_WN_CONFIG.numberOfMsInAWeek
+  );
+
+  return {
+    start: formatDate(start),
+    end: formatDate(end)
+  };
+};
+
 export const weekNumberToDaysList = (epochWeekNumber: number): Date[] => {
   const baseTime =
     epochWeekNumber * EPOCH_WN_CONFIG.numberOfMsInAWeek -

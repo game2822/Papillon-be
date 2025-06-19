@@ -172,6 +172,7 @@ export interface PronoteAccount extends BaseAccount {
 export interface SmartschoolAccount extends BaseAccount {
   service: AccountService.Smartschool;
 
+  instanceurl: string;
   identityProvider?: undefined;
   authentication: {
     session: string;
